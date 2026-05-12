@@ -1,0 +1,170 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 160
+      Enabled: true
+      Line Style:
+        Line Width: 0.03
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: world
+      Value: true
+    - Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Name: RobotModel
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Scale: 0.2
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        world:
+          base_table:
+            left_base_link:
+              left_base:
+                {}
+              left_base_link_inertia:
+                left_shoulder_link:
+                  left_upper_arm_link:
+                    left_forearm_link:
+                      left_wrist_1_link:
+                        left_wrist_2_link:
+                          left_wrist_3_link:
+                            left_flange:
+                              left_tool0:
+                                {}
+                            left_ft_frame:
+                              {}
+            right_base_link:
+              right_base:
+                {}
+              right_base_link_inertia:
+                right_shoulder_link:
+                  right_upper_arm_link:
+                    right_forearm_link:
+                      right_wrist_1_link:
+                        right_wrist_2_link:
+                          right_wrist_3_link:
+                            right_flange:
+                              right_tool0:
+                                {}
+                            right_ft_frame:
+                              {}
+      Update Interval: 0
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Default Light: true
+    Fixed Frame: world
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
+    - Class: rviz_default_plugins/SetInitialPose
+      Covariance x: 0.25
+      Covariance y: 0.25
+      Covariance yaw: 0.06853891945200942
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /initialpose
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /goal_pose
+    - Class: rviz_default_plugins/PublishPoint
+      Single click: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /clicked_point
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
+Views:
+  Current:
+    Class: rviz_default_plugins/Orbit
+    Distance: 4.5
+    Enable Stereo Rendering:
+      Stereo Eye Separation: 0.06
+      Stereo Focal Distance: 1
+      Swap Stereo Eyes: false
+      Value: false
+    Focal Point:
+      X: 0
+      Y: 0
+      Z: 1
+    Focal Shape Fixed Size: true
+    Focal Shape Size: 0.05
+    Invert Z Axis: false
+    Name: Current View
+    Near Clip Distance: 0.01
+    Pitch: 0.55
+    Target Frame: world
+    Value: Orbit (rviz)
+    Yaw: 0.8
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 900
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd0000000400000000000001a300000352fc0200000008fb000000100044006900730070006c00610079007301000000000000012b000000d800fffffffb0000000a00560069006500770073010000013100000116000000ad00fffffffb0000001200530065006c0065006300740069006f006e000000027d0000009b0000008f00fffffffb0000000a0049006d006100670065000000031e000000340000003400fffffffb0000000c00430061006d006500720061000000031e000000340000003400fffffffb0000001200540069006d00650072004200650068006100760069006f0072010000024d000001050000030700ffffff000000010000010f00000352fc0200000001fb0000000a0054006f006f006c00730100000000000003520000000000000000
+  Selection:
+    collapsed: false
+  Time:
+    collapsed: false
+  Tool Properties:
+    collapsed: false
+  Views:
+    collapsed: false
+  Width: 1600
+  X: 70
+  Y: 30
