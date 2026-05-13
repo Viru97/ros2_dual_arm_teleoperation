@@ -11,7 +11,12 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
     ],
-    install_requires=['setuptools'],
+    install_requires=[
+        'setuptools',
+        'opencv-python',
+        'mediapipe',
+        'numpy',
+    ],
     zip_safe=True,
     maintainer='adm-tin-ap',
     maintainer_email='engr.apurv@gmail.com',
@@ -24,6 +29,10 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'teleop_node = dual_arm_teleop.teleop_node:main',
+            'servo_smoke_test = dual_arm_teleop.servo_smoke_test:main',
+            'moveit_joint_goal_test = dual_arm_teleop.moveit_joint_goal_test:main',
+            'controller_joint_test = dual_arm_teleop.controller_joint_test:main',
         ],
     },
 )

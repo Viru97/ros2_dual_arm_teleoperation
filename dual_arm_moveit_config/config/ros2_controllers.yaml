@@ -3,6 +3,12 @@ controller_manager:
   ros__parameters:
     update_rate: 100  # Hz
 
+    # Define all controllers here
+    controller_names:
+      - left_arm_controller
+      - right_arm_controller
+      - dual_arm_controller
+
     left_arm_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
