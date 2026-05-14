@@ -38,8 +38,8 @@ incoming_command_timeout: 0.1
 num_outgoing_halt_msgs_to_publish: 4
 
 # Safety limits
-lower_singularity_threshold: 17.0
-hard_stop_singularity_threshold: 30.0
+lower_singularity_threshold: 35.0
+hard_stop_singularity_threshold: 70.0
 joint_limit_margin: 0.1
 leaving_singularity_threshold_multiplier: 2.0
 

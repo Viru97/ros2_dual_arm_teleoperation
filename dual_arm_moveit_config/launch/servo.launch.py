@@ -1,5 +1,7 @@
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, TimerAction
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, TimerAction
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from moveit_configs_utils import MoveItConfigsBuilder
 import yaml
@@ -20,6 +22,11 @@ def generate_launch_description():
     moveit_config = MoveItConfigsBuilder("dual_ur5e", package_name="dual_arm_moveit_config").to_moveit_configs()
 
     servo_yaml = load_yaml("dual_arm_moveit_config", "config/servo.yaml")
+    auto_start_arg = DeclareLaunchArgument(
+        "auto_start",
+        default_value="false",
+        description="Start Servo immediately. Keep false when using MoveIt plan-and-execute.",
+    )
 
     left_servo_yaml = copy.deepcopy(servo_yaml)
     left_servo_yaml.update({
@@ -75,5 +82,10 @@ def generate_launch_description():
     return LaunchDescription([
         left_servo_node,
         right_servo_node,
-        TimerAction(period=3.0, actions=[start_left_servo, start_right_servo]),
+        auto_start_arg,
+        TimerAction(
+            period=3.0,
+            actions=[start_left_servo, start_right_servo],
+            condition=IfCondition(LaunchConfiguration("auto_start")),
+        ),
     ])
