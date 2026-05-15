@@ -24,7 +24,10 @@ Visualization Manager:
       Scene Geometry:
         Scene Alpha: 1
       Scene Robot:
-        Robot Alpha: 0.5
+        Robot Alpha: 1.0
+      Planning Request:
+        Query Goal State:
+          Value: false
       Value: true
   Global Options:
     Fixed Frame: world
