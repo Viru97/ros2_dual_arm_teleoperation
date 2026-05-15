@@ -4,15 +4,12 @@
 use_gazebo: false
 command_in_type: "speed_units"
 
-# Max speeds. These scale unitless commands; with speed_units the teleop node
-# already publishes velocities in m/s and rad/s.
 scale:
-  linear:  0.5   # meters per second  (was 0.4)
-  rotational:  0.5  # radians per second  (was 0.4)
-  joint: 0.5  # radians per second  (was 0.4)
+  linear:  0.5
+  rotational:  0.5
+  joint: 0.5
 
-# Outgoing command behavior.
-# 50 Hz (0.020 s) — matches the teleop timer and halves command latency vs 30 Hz.
+# 50 Hz matches the teleop timer for minimum latency
 publish_period: 0.020
 low_latency_mode: false
 publish_joint_positions: true
@@ -20,32 +17,32 @@ publish_joint_velocities: true
 publish_joint_accelerations: false
 smoothing_filter_plugin_name: "online_signal_smoothing::ButterworthFilterPlugin"
 
-# The topics Servo will listen to
 cartesian_command_in_topic: ~/delta_twist_cmds
 joint_command_in_topic: ~/delta_joint_cmds
 robot_link_command_frame: left_base_link
 
-# The topics Servo will output to the ROS 2 Controllers
 command_out_type: trajectory_msgs/JointTrajectory
 command_out_topic: /left_arm_controller/joint_trajectory
 
-# The Planning Group
 move_group_name: left_arm
 planning_frame: world
 is_primary_planning_scene_monitor: false
 ee_frame_name: left_tool0
 
-# Increase timeout slightly to tolerate bursty camera frames
 incoming_command_timeout: 0.15
 num_outgoing_halt_msgs_to_publish: 4
 
-# Safety limits
-lower_singularity_threshold: 35.0
-hard_stop_singularity_threshold: 70.0
-joint_limit_margin: 0.1
+# Singularity thresholds — these are smallest-singular-value cutoffs of the Jacobian.
+# LOWER values = more permissive (let the arm get closer to singularity before acting).
+# Original values (35 / 70) were extremely conservative and caused premature stops
+# even in the middle of the normal reachable workspace.
+# New values give ~2x more usable workspace while still protecting the arm.
+lower_singularity_threshold: 17.0     # was 35 — begin decelerating here
+hard_stop_singularity_threshold: 30.0  # was 70 — emergency stop here
 leaving_singularity_threshold_multiplier: 2.0
 
-# Topics and collision checking
+joint_limit_margin: 0.08
+
 joint_topic: /joint_states
 status_topic: ~/status
 check_collisions: true

@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="dual_ur5e">
+
+  <!-- Import UR5e Macro -->
+  <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+
+  <!-- World Link -->
+  <link name="world"/>
+
+  <!-- Simple Table/Base -->
+  <link name="base_table">
+    <visual>
+      <geometry><box size="1.0 2.0 0.1"/></geometry>
+      <material name="gray"><color rgba="0.5 0.5 0.5 1.0"/></material>
+    </visual>
+    <!-- Explicit collision geometry prevents MoveIt warnings and enables
+         table-surface collision checking during Servo. -->
+    <collision>
+      <geometry><box size="1.0 2.0 0.1"/></geometry>
+    </collision>
+  </link>
+
+  <joint name="world_to_table" type="fixed">
+    <parent link="world"/>
+    <child link="base_table"/>
+    <origin xyz="0 0 0.8" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Left arm: panned 0.4 rad outward so it spawns in the ready pose that
+       matches initial_positions.yaml.  Elbow=1.8 keeps it far from singularity. -->
+  <xacro:ur_robot
+    name="left_arm"
+    tf_prefix="left_"
+    parent="base_table"
+    use_fake_hardware="true"
+    initial_positions="${dict(
+      shoulder_pan_joint=0.4,
+      shoulder_lift_joint=-1.2,
+      elbow_joint=1.8,
+      wrist_1_joint=-2.2,
+      wrist_2_joint=-1.57,
+      wrist_3_joint=0.0)}"
+    joint_limits_parameters_file="$(find ur_description)/config/ur5e/joint_limits.yaml"
+    kinematics_parameters_file="$(find ur_description)/config/ur5e/default_kinematics.yaml"
+    physical_parameters_file="$(find ur_description)/config/ur5e/physical_parameters.yaml"
+    visual_parameters_file="$(find ur_description)/config/ur5e/visual_parameters.yaml">
+    <origin xyz="0 0.4 0.05" rpy="0 0 0" />
+  </xacro:ur_robot>
+
+  <!-- Right arm: panned -0.4 rad outward, mirrored wrist_2. -->
+  <xacro:ur_robot
+    name="right_arm"
+    tf_prefix="right_"
+    parent="base_table"
+    use_fake_hardware="true"
+    initial_positions="${dict(
+      shoulder_pan_joint=-0.4,
+      shoulder_lift_joint=-1.2,
+      elbow_joint=1.8,
+      wrist_1_joint=-2.2,
+      wrist_2_joint=1.57,
+      wrist_3_joint=0.0)}"
+    joint_limits_parameters_file="$(find ur_description)/config/ur5e/joint_limits.yaml"
+    kinematics_parameters_file="$(find ur_description)/config/ur5e/default_kinematics.yaml"
+    physical_parameters_file="$(find ur_description)/config/ur5e/physical_parameters.yaml"
+    visual_parameters_file="$(find ur_description)/config/ur5e/visual_parameters.yaml">
+    <origin xyz="0 -0.4 0.05" rpy="0 0 0" />
+  </xacro:ur_robot>
+
+</robot>

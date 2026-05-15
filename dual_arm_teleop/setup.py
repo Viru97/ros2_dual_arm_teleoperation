@@ -36,6 +36,8 @@ setup(
             'servo_smoke_test = dual_arm_teleop.servo_smoke_test:main',
             'moveit_joint_goal_test = dual_arm_teleop.moveit_joint_goal_test:main',
             'controller_joint_test = dual_arm_teleop.controller_joint_test:main',
+            # Drives arms to a safe ready pose at startup (used by servo.launch.py)
+            'ready_pose_node = dual_arm_teleop.ready_pose_node:main',
         ],
     },
 )

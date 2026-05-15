@@ -1,15 +1,23 @@
 # Default initial positions for dual_ur5e's ros2_control fake system
+#
+# Design intent:
+#   - shoulder_pan offset ±0.4 rad spreads arms laterally, preventing cross-arm collision.
+#   - shoulder_lift=-1.2, elbow=1.8 put the forearm in a well-bent "ready" posture
+#     that is far from the elbow singularity (elbow=0) and shoulder singularity.
+#   - wrist_2=±1.57 keeps wrist_1 and wrist_3 axes perpendicular,
+#     avoiding the wrist (inline) singularity (wrist_2=0).
 
 initial_positions:
-  left_elbow_joint: 1.5708
-  left_shoulder_lift_joint: -1.5708
-  left_shoulder_pan_joint: 0.0
-  left_wrist_1_joint: -1.5708
-  left_wrist_2_joint: -1.5708
-  left_wrist_3_joint: 0.0
-  right_elbow_joint: 1.5708
-  right_shoulder_lift_joint: -1.5708
-  right_shoulder_pan_joint: 0.0
-  right_wrist_1_joint: -1.5708
-  right_wrist_2_joint: 1.5708
-  right_wrist_3_joint: 0.0
+  left_shoulder_pan_joint:   0.4    # pan outward (away from right arm)
+  left_shoulder_lift_joint: -1.2    # arm angled forward-down (~-69°)
+  left_elbow_joint:          1.8    # well-bent elbow (~103°), far from elbow singularity
+  left_wrist_1_joint:       -2.2    # wrist angled back
+  left_wrist_2_joint:       -1.57   # 90° — avoids wrist singularity
+  left_wrist_3_joint:        0.0
+
+  right_shoulder_pan_joint: -0.4    # pan outward (away from left arm)
+  right_shoulder_lift_joint: -1.2
+  right_elbow_joint:          1.8
+  right_wrist_1_joint:       -2.2
+  right_wrist_2_joint:        1.57   # mirrored +90°
+  right_wrist_3_joint:        0.0
