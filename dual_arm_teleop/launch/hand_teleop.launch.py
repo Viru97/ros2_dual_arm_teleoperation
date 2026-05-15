@@ -8,7 +8,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 def generate_launch_description():
     arm_arg = DeclareLaunchArgument(
         "arm",
-        default_value="left",
+        default_value="both",
         description="Arm to control: left, right, or both.",
     )
     camera_index_arg = DeclareLaunchArgument(
@@ -23,33 +23,54 @@ def generate_launch_description():
     )
     max_linear_speed_arg = DeclareLaunchArgument(
         "max_linear_speed",
-        default_value="0.15",
+        default_value="0.35",
         description="Maximum Cartesian Servo speed in m/s at full hand deflection.",
     )
     max_angular_speed_arg = DeclareLaunchArgument(
         "max_angular_speed",
-        default_value="0.6",
+        default_value="1.0",
         description="Maximum yaw Servo speed in rad/s at full hand roll.",
     )
     deadzone_arg = DeclareLaunchArgument(
         "deadzone",
-        default_value="0.06",
-        description="Normalized camera deadzone around center.",
+        default_value="0.04",
+        description=(
+            "Normalised deadzone fraction around image centre. "
+            "Hand positions within this radius produce zero velocity. "
+            "Output rescales smoothly from zero at the boundary (no velocity jump)."
+        ),
     )
-    # motion_full_scale_arg = DeclareLaunchArgument(
-    #     "motion_full_scale",
-    #     default_value="0.25",
-    #     description="Hand displacement from neutral that maps to full speed.",
-    # )
+    motion_full_scale_arg = DeclareLaunchArgument(
+        "motion_full_scale",
+        default_value="0.30",
+        description=(
+            "Normalised palm displacement from centre that maps to max speed. "
+            "0.30 means moving the palm 30%% of frame width from centre = full speed. "
+            "Decrease for a more sensitive (twitchy) feel; increase for calmer control."
+        ),
+    )
     filter_alpha_arg = DeclareLaunchArgument(
         "filter_alpha",
-        default_value="0.3",
-        description="EMA smoothing factor. Higher is faster, lower is smoother.",
+        default_value="0.45",
+        description=(
+            "EMA smoothing factor applied to palm position and roll. "
+            "Range 0–1: higher = more responsive but jitterier; "
+            "lower = smoother but laggier. 0.45 is a good default."
+        ),
     )
     no_hand_pause_timeout_arg = DeclareLaunchArgument(
         "no_hand_pause_timeout",
         default_value="0.4",
         description="Seconds without a detected hand before pausing Servo.",
+    )
+    ramp_rate_arg = DeclareLaunchArgument(
+        "ramp_rate",
+        default_value="0.12",
+        description=(
+            "Max fractional velocity change per control tick (0–1). "
+            "Limits acceleration to avoid jerky starts/stops. "
+            "0.12 → ramp from 0 to max_speed in ~8 ticks (~160 ms at 50 Hz)."
+        ),
     )
 
     teleop_node = Node(
@@ -65,11 +86,12 @@ def generate_launch_description():
                 "max_linear_speed": ParameterValue(LaunchConfiguration("max_linear_speed"), value_type=float),
                 "max_angular_speed": ParameterValue(LaunchConfiguration("max_angular_speed"), value_type=float),
                 "deadzone": ParameterValue(LaunchConfiguration("deadzone"), value_type=float),
-                # "motion_full_scale": ParameterValue(LaunchConfiguration("motion_full_scale"), value_type=float),
+                "motion_full_scale": ParameterValue(LaunchConfiguration("motion_full_scale"), value_type=float),
                 "filter_alpha": ParameterValue(LaunchConfiguration("filter_alpha"), value_type=float),
                 "no_hand_pause_timeout": ParameterValue(
                     LaunchConfiguration("no_hand_pause_timeout"), value_type=float
                 ),
+                "ramp_rate": ParameterValue(LaunchConfiguration("ramp_rate"), value_type=float),
             }
         ],
     )
@@ -81,8 +103,9 @@ def generate_launch_description():
         max_linear_speed_arg,
         max_angular_speed_arg,
         deadzone_arg,
-        # motion_full_scale_arg,
+        motion_full_scale_arg,
         filter_alpha_arg,
         no_hand_pause_timeout_arg,
+        ramp_rate_arg,
         teleop_node,
     ])

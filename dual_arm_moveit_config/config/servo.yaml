@@ -7,12 +7,13 @@ command_in_type: "speed_units"
 # Max speeds. These scale unitless commands; with speed_units the teleop node
 # already publishes velocities in m/s and rad/s.
 scale:
-  linear:  0.4  # meters per second
-  rotational:  0.4 # radians per second
-  joint: 0.4 # radians per second
+  linear:  0.5   # meters per second  (was 0.4)
+  rotational:  0.5  # radians per second  (was 0.4)
+  joint: 0.5  # radians per second  (was 0.4)
 
-# Outgoing command behavior
-publish_period: 0.034  # ~30Hz, matches our webcam
+# Outgoing command behavior.
+# 50 Hz (0.020 s) — matches the teleop timer and halves command latency vs 30 Hz.
+publish_period: 0.020
 low_latency_mode: false
 publish_joint_positions: true
 publish_joint_velocities: true
@@ -34,7 +35,8 @@ planning_frame: world
 is_primary_planning_scene_monitor: false
 ee_frame_name: left_tool0
 
-incoming_command_timeout: 0.1
+# Increase timeout slightly to tolerate bursty camera frames
+incoming_command_timeout: 0.15
 num_outgoing_halt_msgs_to_publish: 4
 
 # Safety limits
