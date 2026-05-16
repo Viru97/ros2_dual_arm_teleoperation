@@ -7,13 +7,13 @@ both arms to a safe ready pose before Servo accepts teleoperation commands.
 Timeline
 --------
   t=0 s   : Servo nodes start (in paused/unstarted state)
-  t=0 s   : ready_pose_node starts, waits 1.5 s then publishes goal
-  t=1.5 s : JointTrajectory goals sent → arms begin moving (~3.5 s motion)
-  t=5.5 s : Servo start services called → teleop can begin immediately
+  t=0 s   : if auto_start:=true, ready_pose_node starts
+  t=1.5 s : if auto_start:=true, ready-pose JointTrajectory goals are sent
+  t=5.5 s : if auto_start:=true, Servo start services are called
 
-The auto_start argument (default true) controls whether Servo is started
-automatically.  Set auto_start:=false when using MoveIt plan-and-execute
-alongside Servo and you want to manage the start call yourself.
+The auto_start argument defaults to false so Servo does not take over the
+arm controllers while MoveIt marker plan-and-execute is being used. Hand
+teleop starts/unpauses Servo when needed.
 """
 
 import copy
@@ -54,10 +54,10 @@ def generate_launch_description():
     # ── Launch arguments ─────────────────────────────────────────────────── #
     auto_start_arg = DeclareLaunchArgument(
         "auto_start",
-        default_value="true",   # Changed from false → true; ready_pose_node
-        description=(           # handles the delay so it's safe.
+        default_value="false",
+        description=(
             "Automatically start Servo after the ready pose completes. "
-            "Set false only when manually managing Servo start."
+            "Keep false when using MoveIt plan-and-execute."
         ),
     )
 
@@ -65,7 +65,7 @@ def generate_launch_description():
     left_servo_yaml = copy.deepcopy(servo_yaml)
     left_servo_yaml.update({
         "move_group_name": "left_arm",
-        "ee_frame_name": "left_tool0",
+        "ee_frame_name": "left_robotiq_85_base_link",
         "robot_link_command_frame": "left_base_link",
         "command_out_topic": "/left_arm_controller/joint_trajectory",
     })
@@ -73,7 +73,7 @@ def generate_launch_description():
     right_servo_yaml = copy.deepcopy(servo_yaml)
     right_servo_yaml.update({
         "move_group_name": "right_arm",
-        "ee_frame_name": "right_tool0",
+        "ee_frame_name": "right_robotiq_85_base_link",
         "robot_link_command_frame": "right_base_link",
         "command_out_topic": "/right_arm_controller/joint_trajectory",
     })
@@ -107,12 +107,13 @@ def generate_launch_description():
 
     # ── Ready pose node ───────────────────────────────────────────────────── #
     # Drives both arms to a safe non-singular configuration via direct
-    # JointTrajectory commands.  Runs once then exits.
+    # JointTrajectory commands when auto_start is requested. Runs once then exits.
     ready_pose_node = Node(
         package="dual_arm_teleop",
         executable="ready_pose_node",
         name="ready_pose_node",
         output="screen",
+        condition=IfCondition(LaunchConfiguration("auto_start")),
     )
 
     # ── Servo start services ──────────────────────────────────────────────── #

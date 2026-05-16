@@ -64,7 +64,8 @@
     name="left_RobotiqGripper"
     prefix="left_"
     parent="left_gripper_mount"
-    use_fake_hardware="true">
+    use_fake_hardware="true"
+    gripper_closed_position="0.0">
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:robotiq_gripper>
 
@@ -99,7 +100,8 @@
     name="right_RobotiqGripper"
     prefix="right_"
     parent="right_gripper_mount"
-    use_fake_hardware="true">
+    use_fake_hardware="true"
+    gripper_closed_position="0.0">
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:robotiq_gripper>
 

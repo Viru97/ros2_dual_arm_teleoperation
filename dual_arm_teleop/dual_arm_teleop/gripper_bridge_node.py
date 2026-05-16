@@ -12,13 +12,13 @@ Controller input:
   /left_gripper_controller/joint_trajectory   trajectory_msgs/JointTrajectory
   /right_gripper_controller/joint_trajectory  trajectory_msgs/JointTrajectory
 
-Mapping: value × FINGER_JOINT_MAX_RAD → finger_joint position command.
+Mapping: value × FINGER_JOINT_MAX_RAD → Robotiq main knuckle command.
 
-Robotiq 2F-85 finger_joint limits:
+Robotiq 2F-85 main knuckle limits:
   0.0 rad = fully open
-  0.8 rad = fully closed
-VERIFY the joint name with:
-  grep -r "joint name" ~/teleop_challenge_ws/src/ros2_robotiq_gripper --include="*.xacro" | grep finger
+  0.7929 rad = fully closed
+The other Robotiq joints are mimic/state-only joints, so controllers should
+command only the left knuckle joint for each gripper.
 """
 
 import rclpy
@@ -26,8 +26,8 @@ from rclpy.node import Node
 from std_msgs.msg import Float64
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
-# Robotiq 2F-85: 0 (open) → 0.8 rad (closed).
-FINGER_JOINT_MAX_RAD = 0.8
+# Robotiq 2F-85: 0 (open) -> 0.7929 rad (closed).
+FINGER_JOINT_MAX_RAD = 0.7929
 
 # How quickly the gripper should move to the commanded position.
 # 0.25 s gives snappy open/close without jarring the fake hardware.
@@ -35,12 +35,12 @@ MOTION_DURATION_SEC = 0.25
 
 GRIPPER_CONFIG = {
     "left": {
-        "joint": "left_finger_joint",
+        "joint": "left_robotiq_85_left_knuckle_joint",
         "sub_topic": "/teleop/left_gripper_target",
         "pub_topic": "/left_gripper_controller/joint_trajectory",
     },
     "right": {
-        "joint": "right_finger_joint",
+        "joint": "right_robotiq_85_left_knuckle_joint",
         "sub_topic": "/teleop/right_gripper_target",
         "pub_topic": "/right_gripper_controller/joint_trajectory",
     },

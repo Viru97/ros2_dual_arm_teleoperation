@@ -1,5 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -72,6 +73,16 @@ def generate_launch_description():
             "0.12 → ramp from 0 to max_speed in ~8 ticks (~160 ms at 50 Hz)."
         ),
     )
+    servo_status_log_period_arg = DeclareLaunchArgument(
+        "servo_status_log_period",
+        default_value="2.0",
+        description="Seconds between repeated Servo warning logs with joint angles.",
+    )
+    start_gripper_bridge_arg = DeclareLaunchArgument(
+        "start_gripper_bridge",
+        default_value="true",
+        description="Start the bridge from /teleop/*_gripper_target to gripper controllers.",
+    )
 
     teleop_node = Node(
         package="dual_arm_teleop",
@@ -92,8 +103,18 @@ def generate_launch_description():
                     LaunchConfiguration("no_hand_pause_timeout"), value_type=float
                 ),
                 "ramp_rate": ParameterValue(LaunchConfiguration("ramp_rate"), value_type=float),
+                "servo_status_log_period": ParameterValue(
+                    LaunchConfiguration("servo_status_log_period"), value_type=float
+                ),
             }
         ],
+    )
+    gripper_bridge_node = Node(
+        package="dual_arm_teleop",
+        executable="gripper_bridge_node",
+        name="gripper_bridge_node",
+        output="screen",
+        condition=IfCondition(LaunchConfiguration("start_gripper_bridge")),
     )
 
     return LaunchDescription([
@@ -107,5 +128,8 @@ def generate_launch_description():
         filter_alpha_arg,
         no_hand_pause_timeout_arg,
         ramp_rate_arg,
+        servo_status_log_period_arg,
+        start_gripper_bridge_arg,
         teleop_node,
+        gripper_bridge_node,
     ])

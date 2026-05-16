@@ -19,15 +19,11 @@ smoothing_filter_plugin_name: "online_signal_smoothing::ButterworthFilterPlugin"
 
 cartesian_command_in_topic: ~/delta_twist_cmds
 joint_command_in_topic: ~/delta_joint_cmds
-robot_link_command_frame: left_base_link
 
 command_out_type: trajectory_msgs/JointTrajectory
-command_out_topic: /left_arm_controller/joint_trajectory
 
-move_group_name: left_arm
 planning_frame: world
 is_primary_planning_scene_monitor: false
-ee_frame_name: left_tool0
 
 incoming_command_timeout: 0.15
 num_outgoing_halt_msgs_to_publish: 4

@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, TwistStamped
+from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64, Int8
 from std_srvs.srv import Trigger
 import cv2
@@ -15,6 +16,44 @@ from dual_arm_teleop.signal_filter import EMAFilter
 # Palm center: average of landmarks 0, 5, 9, 13, 17 (wrist + all MCP knuckles).
 # Much more stable than index fingertip (landmark 8).
 PALM_LANDMARKS = [0, 5, 9, 13, 17]
+
+ARM_JOINTS = {
+    "left": [
+        "left_shoulder_pan_joint",
+        "left_shoulder_lift_joint",
+        "left_elbow_joint",
+        "left_wrist_1_joint",
+        "left_wrist_2_joint",
+        "left_wrist_3_joint",
+    ],
+    "right": [
+        "right_shoulder_pan_joint",
+        "right_shoulder_lift_joint",
+        "right_elbow_joint",
+        "right_wrist_1_joint",
+        "right_wrist_2_joint",
+        "right_wrist_3_joint",
+    ],
+}
+
+JOINT_LABELS = {
+    "shoulder_pan_joint": "sh_pan",
+    "shoulder_lift_joint": "sh_lift",
+    "elbow_joint": "elbow",
+    "wrist_1_joint": "wrist1",
+    "wrist_2_joint": "wrist2",
+    "wrist_3_joint": "wrist3",
+}
+
+SERVO_STATUS_MESSAGES = {
+    -1: "Invalid Servo status",
+    1: "Moving closer to a singularity, decelerating",
+    2: "Very close to a singularity, emergency stop",
+    3: "Close to a collision, decelerating",
+    4: "Collision detected, emergency stop",
+    5: "Close to a joint bound, halting",
+    6: "Moving away from a singularity, decelerating",
+}
 
 
 def palm_center(hand):
@@ -46,6 +85,9 @@ class TeleopNode(Node):
         # Velocity ramp: max fractional change per control tick (avoids jerk).
         # 0.12 lets speed ramp from 0→100% in ~8 ticks (~270 ms at 30 Hz).
         self.declare_parameter("ramp_rate", 0.12)
+        # Throttle repeated Servo warning logs while still printing the current
+        # joint pose often enough to diagnose collision/singularity bottlenecks.
+        self.declare_parameter("servo_status_log_period", 2.0)
 
         requested_arm = self.get_parameter("arm").value
         if requested_arm not in ("left", "right", "both"):
@@ -94,12 +136,14 @@ class TeleopNode(Node):
             "left": self.create_subscription(Int8, '/left_servo_node/status', self.left_status_cb, 10),
             "right": self.create_subscription(Int8, '/right_servo_node/status', self.right_status_cb, 10),
         }
+        self.joint_state_sub = self.create_subscription(JointState, "/joint_states", self.joint_state_cb, 10)
         self.servo_status = {"left": 0, "right": 0}
+        self.current_joint_positions = {}
         self.started_servos = set()
         self.paused_servos = set()
         self.requested_servo_services = set()
         self.last_hand_seen_time = {"left": None, "right": None}
-        self.last_status_log_time = {"left": 0.0, "right": 0.0}
+        self.last_status_log_time = {"left": {}, "right": {}}
 
         self.tracker = HandTracker(max_num_hands=2)
 
@@ -115,6 +159,10 @@ class TeleopNode(Node):
 
         # Velocity ramping: track previous output velocity per arm
         self.prev_vel = {arm: {"vel_y": 0.0, "vel_z": 0.0, "yaw": 0.0} for arm in ("left", "right")}
+        self.last_published_commands = {
+            arm: {"vel_y": 0.0, "vel_z": 0.0, "yaw": 0.0}
+            for arm in ("left", "right")
+        }
 
         self.max_linear_speed = float(self.get_parameter("max_linear_speed").value)
         self.max_angular_speed = float(self.get_parameter("max_angular_speed").value)
@@ -122,6 +170,7 @@ class TeleopNode(Node):
         self.motion_full_scale = float(self.get_parameter("motion_full_scale").value)
         self.ramp_rate = float(self.get_parameter("ramp_rate").value)
         self.no_hand_pause_timeout = float(self.get_parameter("no_hand_pause_timeout").value)
+        self.servo_status_log_period = float(self.get_parameter("servo_status_log_period").value)
         self.last_log_time = 0.0
 
         camera_index = int(self.get_parameter("camera_index").value)
@@ -152,14 +201,53 @@ class TeleopNode(Node):
         self.servo_status["right"] = msg.data
         self.log_servo_status("right", msg.data)
 
+    def joint_state_cb(self, msg):
+        for name, position in zip(msg.name, msg.position):
+            self.current_joint_positions[name] = position
+
     def log_servo_status(self, arm, status):
+        if status == 0:
+            return
+
         now = time.monotonic()
-        if status == 2 and now - self.last_status_log_time[arm] > 2.0:
-            self.last_status_log_time[arm] = now
-            self.get_logger().warn(
-                f"{arm.capitalize()} Servo hit a singularity stop. "
-                "Move back toward a bent ready pose."
-            )
+        last_log_time = self.last_status_log_time[arm].get(status, 0.0)
+        if now - last_log_time < self.servo_status_log_period:
+            return
+
+        self.last_status_log_time[arm][status] = now
+        status_text = SERVO_STATUS_MESSAGES.get(status, f"Unknown Servo status {status}")
+        self.get_logger().warn(
+            f"{arm.capitalize()} Servo status {status}: {status_text}. "
+            f"{self.format_joint_angles(arm)}. "
+            f"{self.format_last_command(arm)}"
+        )
+
+    def format_joint_angles(self, arm):
+        parts = []
+        missing = []
+        prefix = f"{arm}_"
+        for joint_name in ARM_JOINTS[arm]:
+            position = self.current_joint_positions.get(joint_name)
+            short_name = joint_name.replace(prefix, "")
+            label = JOINT_LABELS.get(short_name, short_name)
+            if position is None:
+                missing.append(label)
+                continue
+            parts.append(f"{label}={position:+.3f}rad/{math.degrees(position):+.0f}deg")
+
+        if not parts:
+            return "joint angles unavailable; no /joint_states received yet."
+        suffix = f"; missing: {', '.join(missing)}" if missing else ""
+        return f"joint angles: {', '.join(parts)}{suffix}"
+
+    def format_last_command(self, arm):
+        command = self.last_published_commands[arm]
+        return (
+            "last command: "
+            f"y={command['vel_y']:+.2f} m/s, "
+            f"z={command['vel_z']:+.2f} m/s, "
+            f"yaw={command['yaw']:+.2f} rad/s"
+        )
 
     # ------------------------------------------------------------------ #
     # Servo service helpers
@@ -324,11 +412,13 @@ class TeleopNode(Node):
         yaw_axis = self.normalized_axis(smooth_roll, deadzone=0.03, full_scale=0.15)
         yaw = yaw_axis * self.max_angular_speed
 
-        # Pinch distance for gripper (thumb tip ↔ index tip, landmarks 4 & 8)
+        # Pinch distance for gripper (thumb tip ↔ index tip, landmarks 4 & 8).
+        # Bridge convention: 0.0 = open, 1.0 = closed. A small pinch should
+        # close the gripper, while spread fingers should open it.
         thumb_tip = hand.landmark[4]
         index_tip = hand.landmark[8]
         pinch = math.hypot(thumb_tip.x - index_tip.x, thumb_tip.y - index_tip.y)
-        gripper = self.clamp((pinch - 0.03) / 0.15, 0.0, 1.0)
+        gripper = 1.0 - self.clamp((pinch - 0.03) / 0.15, 0.0, 1.0)
 
         return {"vel_y": vel_y, "vel_z": vel_z, "yaw": yaw, "gripper": gripper}
 
@@ -381,6 +471,7 @@ class TeleopNode(Node):
     # ------------------------------------------------------------------ #
 
     def publish_twist(self, arm, vel_y, vel_z, yaw):
+        self.last_published_commands[arm] = {"vel_y": vel_y, "vel_z": vel_z, "yaw": yaw}
         msg = TwistStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = self.command_frames[arm]
@@ -413,6 +504,8 @@ class TeleopNode(Node):
         self.pose_pubs[arm].publish(msg)
 
     def publish_halt_commands(self):
+        if not rclpy.ok():
+            return
         for arm in self.active_arms:
             self.publish_twist(arm, 0.0, 0.0, 0.0)
 
@@ -480,11 +573,15 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        node.publish_halt_commands()
+        try:
+            node.publish_halt_commands()
+        except Exception as exc:
+            node.get_logger().debug(f"Skipping halt publish during shutdown: {exc}")
         node.cap.release()
         cv2.destroyAllWindows()
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
