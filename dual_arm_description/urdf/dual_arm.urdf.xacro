@@ -1,18 +1,26 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://wiki.ros.org/xacro" name="dual_ur5e">
 
-  <!-- Import UR5e Macro -->
+  <!-- ── Arm macro ─────────────────────────────────────────────────────── -->
   <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
 
-  <!-- World Link -->
+  <!-- ── Gripper macros ────────────────────────────────────────────────── -->
+  <!-- robotiq_gripper: attaches gripper geometry + its own ros2_control block -->
+  <xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
+  <!-- ur_to_robotiq: inserts the physical UR-to-Robotiq adapter link + mesh  -->
+  <xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro"/>
+
+  <!-- ── World & table ─────────────────────────────────────────────────── -->
   <link name="world"/>
 
-  <!-- Simple Table/Base -->
   <link name="base_table">
     <visual>
       <geometry><box size="1.0 2.0 0.1"/></geometry>
       <material name="gray"><color rgba="0.5 0.5 0.5 1.0"/></material>
     </visual>
+    <collision>
+      <geometry><box size="1.0 2.0 0.1"/></geometry>
+    </collision>
   </link>
 
   <joint name="world_to_table" type="fixed">
@@ -21,12 +29,19 @@
     <origin xyz="0 0 0.8" rpy="0 0 0"/>
   </joint>
 
+  <!-- ── Left arm ──────────────────────────────────────────────────────── -->
   <xacro:ur_robot
     name="left_arm"
     tf_prefix="left_"
     parent="base_table"
     use_fake_hardware="true"
-    initial_positions="${dict(shoulder_pan_joint=0.0,shoulder_lift_joint=-1.57,elbow_joint=0.0,wrist_1_joint=-1.57,wrist_2_joint=0.0,wrist_3_joint=0.0)}"
+    initial_positions="${dict(
+      shoulder_pan_joint=0.4,
+      shoulder_lift_joint=-1.2,
+      elbow_joint=1.8,
+      wrist_1_joint=-2.2,
+      wrist_2_joint=-1.57,
+      wrist_3_joint=0.0)}"
     joint_limits_parameters_file="$(find ur_description)/config/ur5e/joint_limits.yaml"
     kinematics_parameters_file="$(find ur_description)/config/ur5e/default_kinematics.yaml"
     physical_parameters_file="$(find ur_description)/config/ur5e/physical_parameters.yaml"
@@ -34,17 +49,58 @@
     <origin xyz="0 0.4 0.05" rpy="0 0 0" />
   </xacro:ur_robot>
 
+  <!-- Left adapter: inserts the UR-to-Robotiq coupler mesh between
+       left_tool0 and a new mount link (left_gripper_mount).
+       The adapter macro creates left_gripper_mount as an empty link. -->
+  <xacro:ur_to_robotiq
+    prefix="left_"
+    parent="left_tool0"
+    child="left_gripper_mount"/>
+
+  <!-- Left gripper: attached to left_gripper_mount.
+       use_fake_hardware=true makes the macro add its own mock ros2_control
+       system for left_finger_joint — no manual joint entry needed. -->
+  <xacro:robotiq_gripper
+    name="left_RobotiqGripper"
+    prefix="left_"
+    parent="left_gripper_mount"
+    use_fake_hardware="true">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:robotiq_gripper>
+
+  <!-- ── Right arm ─────────────────────────────────────────────────────── -->
   <xacro:ur_robot
     name="right_arm"
     tf_prefix="right_"
     parent="base_table"
     use_fake_hardware="true"
-    initial_positions="${dict(shoulder_pan_joint=0.0,shoulder_lift_joint=-1.57,elbow_joint=0.0,wrist_1_joint=-1.57,wrist_2_joint=0.0,wrist_3_joint=0.0)}"
+    initial_positions="${dict(
+      shoulder_pan_joint=-0.4,
+      shoulder_lift_joint=-1.2,
+      elbow_joint=1.8,
+      wrist_1_joint=-2.2,
+      wrist_2_joint=1.57,
+      wrist_3_joint=0.0)}"
     joint_limits_parameters_file="$(find ur_description)/config/ur5e/joint_limits.yaml"
     kinematics_parameters_file="$(find ur_description)/config/ur5e/default_kinematics.yaml"
     physical_parameters_file="$(find ur_description)/config/ur5e/physical_parameters.yaml"
     visual_parameters_file="$(find ur_description)/config/ur5e/visual_parameters.yaml">
     <origin xyz="0 -0.4 0.05" rpy="0 0 0" />
   </xacro:ur_robot>
+
+  <!-- Right adapter -->
+  <xacro:ur_to_robotiq
+    prefix="right_"
+    parent="right_tool0"
+    child="right_gripper_mount"/>
+
+  <!-- Right gripper -->
+  <xacro:robotiq_gripper
+    name="right_RobotiqGripper"
+    prefix="right_"
+    parent="right_gripper_mount"
+    use_fake_hardware="true">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:robotiq_gripper>
 
 </robot>
