@@ -53,12 +53,12 @@ class GripperBridgeNode(Node):
     def __init__(self):
         super().__init__("gripper_bridge_node")
 
-        self._publishers = {}
+        self.gripper_pubs = {}
         self._subscriptions = []
 
         for arm, cfg in GRIPPER_CONFIG.items():
             pub = self.create_publisher(JointTrajectory, cfg["pub_topic"], 10)
-            self._publishers[arm] = (pub, cfg["joint"])
+            self.gripper_pubs[arm] = (pub, cfg["joint"])
 
             # Capture arm name in closure
             sub = self.create_subscription(
@@ -84,7 +84,7 @@ class GripperBridgeNode(Node):
         traj = JointTrajectory()
         traj.header.stamp = self.get_clock().now().to_msg()
 
-        pub, joint_name = self._publishers[arm]
+        pub, joint_name = self.gripper_pubs[arm]
         traj.joint_names = [joint_name]
 
         pt = JointTrajectoryPoint()

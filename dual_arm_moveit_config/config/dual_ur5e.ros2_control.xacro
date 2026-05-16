@@ -92,6 +92,20 @@
                 </state_interface>
                 <state_interface name="velocity"/>
             </joint>
+            <joint name="left_robotiq_85_left_knuckle_joint">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['left_robotiq_85_left_knuckle_joint']}</param>
+                </state_interface>
+                <state_interface name="velocity"/>
+            </joint>
+            <joint name="right_robotiq_85_left_knuckle_joint">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['right_robotiq_85_left_knuckle_joint']}</param>
+                </state_interface>
+                <state_interface name="velocity"/>
+            </joint>
 
         </ros2_control>
     </xacro:macro>

@@ -1,4 +1,4 @@
-# ros2_controllers.yaml — controller_manager configuration for dual UR5e + Robotiq grippers
+# This config file is used by ros2_control
 controller_manager:
   ros__parameters:
     update_rate: 100  # Hz
@@ -19,16 +19,18 @@ controller_manager:
     dual_arm_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
-    joint_state_broadcaster:
-      type: joint_state_broadcaster/JointStateBroadcaster
 
     left_gripper_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
+
     right_gripper_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
-# ── Arm controllers (unchanged) ─────────────────────────────────────────── #
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
 left_arm_controller:
   ros__parameters:
     joints:
@@ -38,9 +40,11 @@ left_arm_controller:
       - left_wrist_1_joint
       - left_wrist_2_joint
       - left_wrist_3_joint
-    command_interfaces: [position]
-    state_interfaces:   [position, velocity]
-
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
 right_arm_controller:
   ros__parameters:
     joints:
@@ -50,9 +54,11 @@ right_arm_controller:
       - right_wrist_1_joint
       - right_wrist_2_joint
       - right_wrist_3_joint
-    command_interfaces: [position]
-    state_interfaces:   [position, velocity]
-
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
 dual_arm_controller:
   ros__parameters:
     joints:
@@ -68,36 +74,26 @@ dual_arm_controller:
       - right_wrist_1_joint
       - right_wrist_2_joint
       - right_wrist_3_joint
-    command_interfaces: [position]
-    state_interfaces:   [position, velocity]
-
-# ── Gripper controllers ──────────────────────────────────────────────────── #
-# The Robotiq 2F-85 has one actuated DOF: finger_joint (0.0 open → 0.8 closed).
-# VERIFY the joint name with:
-#   grep -r "joint name" ~/teleop_challenge_ws/src/ros2_robotiq_gripper --include="*.xacro" | grep finger
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
 left_gripper_controller:
   ros__parameters:
     joints:
-      - left_finger_joint
-    command_interfaces: [position]
-    state_interfaces:   [position, velocity]
-    # Allow large goal tolerances — gripper does not need precision position control
-    goal_time:          5.0
-    stopped_velocity_tolerance: 0.01
-    constraints:
-      goal_time: 5.0
-      left_finger_joint:
-        goal: 0.05
-
+      - left_robotiq_85_left_knuckle_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
 right_gripper_controller:
   ros__parameters:
     joints:
-      - right_finger_joint
-    command_interfaces: [position]
-    state_interfaces:   [position, velocity]
-    goal_time:          5.0
-    stopped_velocity_tolerance: 0.01
-    constraints:
-      goal_time: 5.0
-      right_finger_joint:
-        goal: 0.05
+      - right_robotiq_85_left_knuckle_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity

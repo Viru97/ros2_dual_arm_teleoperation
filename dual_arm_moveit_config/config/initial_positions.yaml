@@ -8,6 +8,7 @@
 #     avoiding the wrist (inline) singularity (wrist_2=0).
 
 initial_positions:
+  left_robotiq_85_left_knuckle_joint: 0
   left_shoulder_pan_joint:   0.4    # pan outward (away from right arm)
   left_shoulder_lift_joint: -1.2    # arm angled forward-down (~-69°)
   left_elbow_joint:          1.8    # well-bent elbow (~103°), far from elbow singularity
@@ -15,6 +16,7 @@ initial_positions:
   left_wrist_2_joint:       -1.57   # 90° — avoids wrist singularity
   left_wrist_3_joint:        0.0
 
+  right_robotiq_85_left_knuckle_joint: 0
   right_shoulder_pan_joint: -0.4    # pan outward (away from left arm)
   right_shoulder_lift_joint: -1.2
   right_elbow_joint:          1.8
