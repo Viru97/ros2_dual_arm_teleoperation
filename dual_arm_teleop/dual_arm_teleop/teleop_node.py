@@ -178,8 +178,8 @@ class TeleopNode(Node):
         # Request 60 fps from camera where supported to reduce input latency
         self.cap.set(cv2.CAP_PROP_FPS, 60)
 
-        # Timer at ~50 Hz (was 30 Hz / 0.033 s) — matches servo publish_period
-        self.timer = self.create_timer(0.020, self.timer_callback)
+        # Timer at ~100 Hz; matches MoveIt Servo publish_period for smoother RViz motion.
+        self.timer = self.create_timer(0.010, self.timer_callback)
         self.get_logger().info(
             f"Hand teleop started for {self.active_arms}. "
             "Center hand to stop; move hand to servo. "

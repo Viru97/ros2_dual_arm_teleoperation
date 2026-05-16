@@ -9,8 +9,8 @@ scale:
   rotational:  0.5
   joint: 0.5
 
-# 50 Hz matches the teleop timer for minimum latency
-publish_period: 0.020
+# 100 Hz matches the teleop timer and keeps RViz joint-state playback smooth.
+publish_period: 0.010
 low_latency_mode: false
 publish_joint_positions: true
 publish_joint_velocities: true

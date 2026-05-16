@@ -72,6 +72,11 @@ def generate_launch_description():
         default_value="2.0",
         description="Seconds between repeated Servo warning logs.",
     )
+    visualization_publish_frequency_arg = DeclareLaunchArgument(
+        "visualization_publish_frequency",
+        default_value="100.0",
+        description="MoveIt/RViz visualization publish frequency in Hz.",
+    )
     start_gripper_bridge_arg = DeclareLaunchArgument(
         "start_gripper_bridge",
         default_value="true",
@@ -89,6 +94,7 @@ def generate_launch_description():
     demo_launch = include_launch(
         "dual_arm_moveit_config",
         "launch/demo.launch.py",
+        {"publish_frequency": LaunchConfiguration("visualization_publish_frequency")},
     )
 
     servo_launch = include_launch(
@@ -128,6 +134,7 @@ def generate_launch_description():
         no_hand_pause_timeout_arg,
         ramp_rate_arg,
         servo_status_log_period_arg,
+        visualization_publish_frequency_arg,
         start_gripper_bridge_arg,
         servo_auto_start_arg,
 

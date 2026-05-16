@@ -70,7 +70,7 @@ def generate_launch_description():
         description=(
             "Max fractional velocity change per control tick (0–1). "
             "Limits acceleration to avoid jerky starts/stops. "
-            "0.12 → ramp from 0 to max_speed in ~8 ticks (~160 ms at 50 Hz)."
+            "0.12 → ramp from 0 to max_speed in ~8 ticks (~80 ms at 100 Hz)."
         ),
     )
     servo_status_log_period_arg = DeclareLaunchArgument(
