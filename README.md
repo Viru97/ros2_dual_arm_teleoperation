@@ -44,8 +44,9 @@ Tunable launch parameters:
 ```bash
 ros2 launch dual_arm_teleop hand_teleop.launch.py \
   arm:=left \
-  max_linear_speed:=0.25 \
-  filter_alpha:=0.35 \
+  max_linear_speed:=0.45 \
+  motion_full_scale:=0.24 \
+  filter_alpha:=0.50 \
   operator_lock_enabled:=true \
   operator_acquire_radius:=0.45 \
   operator_max_jump:=0.30
@@ -92,7 +93,7 @@ Useful launch options:
 ```bash
 ./run_full_teleop.sh arm:=left
 ./run_full_teleop.sh arm:=both show_debug_image:=true
-./run_full_teleop.sh max_linear_speed:=0.20 max_angular_speed:=0.7
+./run_full_teleop.sh max_linear_speed:=0.30 max_angular_speed:=0.8 motion_full_scale:=0.32
 ```
 
 The full launch starts:

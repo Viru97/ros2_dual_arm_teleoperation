@@ -5,9 +5,11 @@ use_gazebo: false
 command_in_type: "speed_units"
 
 scale:
-  linear:  0.5
-  rotational:  0.5
-  joint: 0.5
+  # The teleop node already limits speed. Keep Servo scale at 1.0 so launch
+  # parameters map directly to robot velocity instead of being halved again.
+  linear:  1.0
+  rotational:  1.0
+  joint: 1.0
 
 # 100 Hz matches the teleop timer and keeps RViz joint-state playback smooth.
 publish_period: 0.010
@@ -37,11 +39,12 @@ lower_singularity_threshold: 17.0     # was 35 — begin decelerating here
 hard_stop_singularity_threshold: 30.0  # was 70 — emergency stop here
 leaving_singularity_threshold_multiplier: 2.0
 
-joint_limit_margin: 0.08
+# Slightly larger usable workspace while still slowing before hard joint limits.
+joint_limit_margin: 0.06
 
 joint_topic: /joint_states
 status_topic: ~/status
 check_collisions: true
-collision_check_rate: 10.0
+collision_check_rate: 20.0
 self_collision_proximity_threshold: 0.01
 scene_collision_proximity_threshold: 0.02

@@ -24,12 +24,12 @@ def generate_launch_description():
     )
     max_linear_speed_arg = DeclareLaunchArgument(
         "max_linear_speed",
-        default_value="0.35",
+        default_value="0.45",
         description="Maximum Cartesian Servo speed in m/s at full hand deflection.",
     )
     max_angular_speed_arg = DeclareLaunchArgument(
         "max_angular_speed",
-        default_value="1.0",
+        default_value="1.2",
         description="Maximum yaw Servo speed in rad/s at full hand roll.",
     )
     deadzone_arg = DeclareLaunchArgument(
@@ -43,20 +43,20 @@ def generate_launch_description():
     )
     motion_full_scale_arg = DeclareLaunchArgument(
         "motion_full_scale",
-        default_value="0.30",
+        default_value="0.24",
         description=(
             "Normalised palm displacement from centre that maps to max speed. "
-            "0.30 means moving the palm 30%% of frame width from centre = full speed. "
+            "0.24 means moving the palm 24%% of frame width from centre = full speed. "
             "Decrease for a more sensitive (twitchy) feel; increase for calmer control."
         ),
     )
     filter_alpha_arg = DeclareLaunchArgument(
         "filter_alpha",
-        default_value="0.45",
+        default_value="0.50",
         description=(
             "EMA smoothing factor applied to palm position and roll. "
             "Range 0–1: higher = more responsive but jitterier; "
-            "lower = smoother but laggier. 0.45 is a good default."
+            "lower = smoother but laggier. 0.50 is a responsive demo default."
         ),
     )
     no_hand_pause_timeout_arg = DeclareLaunchArgument(
@@ -66,11 +66,11 @@ def generate_launch_description():
     )
     ramp_rate_arg = DeclareLaunchArgument(
         "ramp_rate",
-        default_value="0.12",
+        default_value="0.10",
         description=(
             "Max fractional velocity change per control tick (0–1). "
             "Limits acceleration to avoid jerky starts/stops. "
-            "0.12 → ramp from 0 to max_speed in ~8 ticks (~80 ms at 100 Hz)."
+            "0.10 -> ramp from 0 to max_speed in ~10 ticks (~100 ms at 100 Hz)."
         ),
     )
     servo_status_log_period_arg = DeclareLaunchArgument(

@@ -71,22 +71,21 @@ class TeleopNode(Node):
         self.declare_parameter("arm", "both")
         self.declare_parameter("camera_index", 0)
         self.declare_parameter("show_debug_image", True)
-        # Raised from 0.15 → 0.35 m/s for snappier response
-        self.declare_parameter("max_linear_speed", 0.35)
-        # Raised from 0.6 → 1.0 rad/s for more usable rotation
-        self.declare_parameter("max_angular_speed", 1.0)
+        # Fast enough for a visible demo while still below typical teach-mode speeds.
+        self.declare_parameter("max_linear_speed", 0.45)
+        self.declare_parameter("max_angular_speed", 1.2)
         # Tighter deadzone (was 0.06) so motion starts sooner
         self.declare_parameter("deadzone", 0.04)
-        # Faster EMA (was 0.3) — still smooths jitter but responds quicker
-        self.declare_parameter("filter_alpha", 0.45)
+        # EMA smoothing for palm pose and roll. Higher follows the operator sooner.
+        self.declare_parameter("filter_alpha", 0.50)
         self.declare_parameter("no_hand_pause_timeout", 0.4)
         # Full-scale hand displacement from centre that maps to max speed.
         # Smaller value = less wrist travel needed for full speed.
-        # 0.30 means moving hand 30% of frame width from centre = max speed.
-        self.declare_parameter("motion_full_scale", 0.30)
+        # 0.24 means moving hand 24% of pane width from centre = max speed.
+        self.declare_parameter("motion_full_scale", 0.24)
         # Velocity ramp: max fractional change per control tick (avoids jerk).
-        # 0.12 lets speed ramp from 0→100% in ~8 ticks (~80 ms at 100 Hz).
-        self.declare_parameter("ramp_rate", 0.12)
+        # 0.10 ramps from 0->100% in ~10 ticks (~100 ms at 100 Hz).
+        self.declare_parameter("ramp_rate", 0.10)
         # Throttle repeated Servo warning logs while still printing the current
         # joint pose often enough to diagnose collision/singularity bottlenecks.
         self.declare_parameter("servo_status_log_period", 2.0)

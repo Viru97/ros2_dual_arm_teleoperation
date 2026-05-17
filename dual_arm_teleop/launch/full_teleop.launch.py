@@ -37,13 +37,13 @@ def generate_launch_description():
     )
     max_linear_speed_arg = DeclareLaunchArgument(
         "max_linear_speed",
-        default_value="0.35",
-        description="Maximum Cartesian Servo speed in m/s.",
+        default_value="0.45",
+        description="Maximum Cartesian Servo speed in m/s at full hand deflection.",
     )
     max_angular_speed_arg = DeclareLaunchArgument(
         "max_angular_speed",
-        default_value="1.0",
-        description="Maximum yaw Servo speed in rad/s.",
+        default_value="1.2",
+        description="Maximum yaw Servo speed in rad/s at full hand roll.",
     )
     deadzone_arg = DeclareLaunchArgument(
         "deadzone",
@@ -52,12 +52,12 @@ def generate_launch_description():
     )
     motion_full_scale_arg = DeclareLaunchArgument(
         "motion_full_scale",
-        default_value="0.30",
+        default_value="0.24",
         description="Normalised palm displacement that maps to max speed.",
     )
     filter_alpha_arg = DeclareLaunchArgument(
         "filter_alpha",
-        default_value="0.45",
+        default_value="0.50",
         description="EMA smoothing factor for palm pose and roll.",
     )
     no_hand_pause_timeout_arg = DeclareLaunchArgument(
@@ -67,7 +67,7 @@ def generate_launch_description():
     )
     ramp_rate_arg = DeclareLaunchArgument(
         "ramp_rate",
-        default_value="0.12",
+        default_value="0.10",
         description="Max fractional velocity change per control tick.",
     )
     servo_status_log_period_arg = DeclareLaunchArgument(
