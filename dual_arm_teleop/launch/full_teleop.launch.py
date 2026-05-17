@@ -3,8 +3,11 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, TimerAction
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def include_launch(package_name, relative_path, launch_arguments=None):
@@ -87,6 +90,26 @@ def generate_launch_description():
         default_value="0.30",
         description="Maximum normalized palm jump between frames before a hand is rejected.",
     )
+    safety_latch_enabled_arg = DeclareLaunchArgument(
+        "safety_latch_enabled",
+        default_value="true",
+        description="Pause and lock out hand commands after hard Servo stops.",
+    )
+    split_control_window_arg = DeclareLaunchArgument(
+        "split_control_window",
+        default_value="true",
+        description="Divide the camera window into left/right control panes, one per arm.",
+    )
+    invert_lateral_axis_arg = DeclareLaunchArgument(
+        "invert_lateral_axis",
+        default_value="true",
+        description="Use front-view intuitive lateral motion: hand right moves robot right.",
+    )
+    swap_control_panes_arg = DeclareLaunchArgument(
+        "swap_control_panes",
+        default_value="true",
+        description="Swap pane ownership: left robot uses right pane, right robot uses left pane.",
+    )
     visualization_publish_frequency_arg = DeclareLaunchArgument(
         "visualization_publish_frequency",
         default_value="100.0",
@@ -104,6 +127,31 @@ def generate_launch_description():
             "If true, servo.launch.py also sends the ready pose and starts Servo. "
             "Default false lets hand_teleop start Servo when a hand is detected."
         ),
+    )
+    start_handover_baton_arg = DeclareLaunchArgument(
+        "start_handover_baton",
+        default_value="false",
+        description="Optionally start the RViz marker publisher for the handover demo object.",
+    )
+    baton_frame_arg = DeclareLaunchArgument(
+        "baton_frame",
+        default_value="world",
+        description="Frame used for the handover baton marker pose.",
+    )
+    baton_x_arg = DeclareLaunchArgument(
+        "baton_x",
+        default_value="0.5",
+        description="Handover baton marker x position.",
+    )
+    baton_y_arg = DeclareLaunchArgument(
+        "baton_y",
+        default_value="0.0",
+        description="Handover baton marker y position.",
+    )
+    baton_z_arg = DeclareLaunchArgument(
+        "baton_z",
+        default_value="0.7",
+        description="Handover baton marker z position.",
     )
 
     demo_launch = include_launch(
@@ -136,8 +184,28 @@ def generate_launch_description():
             "operator_lock_enabled": LaunchConfiguration("operator_lock_enabled"),
             "operator_acquire_radius": LaunchConfiguration("operator_acquire_radius"),
             "operator_max_jump": LaunchConfiguration("operator_max_jump"),
+            "safety_latch_enabled": LaunchConfiguration("safety_latch_enabled"),
+            "split_control_window": LaunchConfiguration("split_control_window"),
+            "invert_lateral_axis": LaunchConfiguration("invert_lateral_axis"),
+            "swap_control_panes": LaunchConfiguration("swap_control_panes"),
             "start_gripper_bridge": LaunchConfiguration("start_gripper_bridge"),
         },
+    )
+
+    handover_baton_node = Node(
+        package="dual_arm_teleop",
+        executable="handover_baton_node",
+        name="handover_baton_node",
+        output="screen",
+        parameters=[
+            {
+                "frame_id": LaunchConfiguration("baton_frame"),
+                "x": ParameterValue(LaunchConfiguration("baton_x"), value_type=float),
+                "y": ParameterValue(LaunchConfiguration("baton_y"), value_type=float),
+                "z": ParameterValue(LaunchConfiguration("baton_z"), value_type=float),
+            }
+        ],
+        condition=IfCondition(LaunchConfiguration("start_handover_baton")),
     )
 
     return LaunchDescription([
@@ -155,12 +223,22 @@ def generate_launch_description():
         operator_lock_enabled_arg,
         operator_acquire_radius_arg,
         operator_max_jump_arg,
+        safety_latch_enabled_arg,
+        split_control_window_arg,
+        invert_lateral_axis_arg,
+        swap_control_panes_arg,
         visualization_publish_frequency_arg,
         start_gripper_bridge_arg,
         servo_auto_start_arg,
+        start_handover_baton_arg,
+        baton_frame_arg,
+        baton_x_arg,
+        baton_y_arg,
+        baton_z_arg,
 
         LogInfo(msg="Starting MoveIt demo stack: RViz, move_group, ros2_control, controllers."),
         demo_launch,
+        handover_baton_node,
 
         TimerAction(
             period=4.0,

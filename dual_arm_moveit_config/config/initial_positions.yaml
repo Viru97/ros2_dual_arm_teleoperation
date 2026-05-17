@@ -19,7 +19,7 @@ initial_positions:
   right_shoulder_lift_joint: -1.2
   right_elbow_joint:          1.8
   right_wrist_1_joint:       -2.2
-  right_wrist_2_joint:        1.57   # mirrored +90°
+  right_wrist_2_joint:       -1.57
   right_wrist_3_joint:        0.0
 
   # Gripper spawn poses (0.0 = fully open)

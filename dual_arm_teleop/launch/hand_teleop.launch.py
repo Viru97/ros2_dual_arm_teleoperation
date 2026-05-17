@@ -96,6 +96,29 @@ def generate_launch_description():
         default_value="0.30",
         description="Maximum normalized palm jump between frames before a hand is rejected.",
     )
+    safety_latch_enabled_arg = DeclareLaunchArgument(
+        "safety_latch_enabled",
+        default_value="true",
+        description=(
+            "Pause and lock out hand commands after hard Servo stops "
+            "(collision, singularity emergency stop, joint bound halt)."
+        ),
+    )
+    split_control_window_arg = DeclareLaunchArgument(
+        "split_control_window",
+        default_value="true",
+        description="Divide the camera window into left/right control panes, one per arm.",
+    )
+    invert_lateral_axis_arg = DeclareLaunchArgument(
+        "invert_lateral_axis",
+        default_value="true",
+        description="Use front-view intuitive lateral motion: hand right moves robot right.",
+    )
+    swap_control_panes_arg = DeclareLaunchArgument(
+        "swap_control_panes",
+        default_value="true",
+        description="Swap pane ownership: left robot uses right pane, right robot uses left pane.",
+    )
     start_gripper_bridge_arg = DeclareLaunchArgument(
         "start_gripper_bridge",
         default_value="true",
@@ -133,6 +156,18 @@ def generate_launch_description():
                 "operator_max_jump": ParameterValue(
                     LaunchConfiguration("operator_max_jump"), value_type=float
                 ),
+                "safety_latch_enabled": ParameterValue(
+                    LaunchConfiguration("safety_latch_enabled"), value_type=bool
+                ),
+                "split_control_window": ParameterValue(
+                    LaunchConfiguration("split_control_window"), value_type=bool
+                ),
+                "invert_lateral_axis": ParameterValue(
+                    LaunchConfiguration("invert_lateral_axis"), value_type=bool
+                ),
+                "swap_control_panes": ParameterValue(
+                    LaunchConfiguration("swap_control_panes"), value_type=bool
+                ),
             }
         ],
     )
@@ -159,6 +194,10 @@ def generate_launch_description():
         operator_lock_enabled_arg,
         operator_acquire_radius_arg,
         operator_max_jump_arg,
+        safety_latch_enabled_arg,
+        split_control_window_arg,
+        invert_lateral_axis_arg,
+        swap_control_panes_arg,
         start_gripper_bridge_arg,
         teleop_node,
         gripper_bridge_node,

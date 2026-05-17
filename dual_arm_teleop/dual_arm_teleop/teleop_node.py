@@ -55,6 +55,8 @@ SERVO_STATUS_MESSAGES = {
     6: "Moving away from a singularity, decelerating",
 }
 
+HARD_STOP_SERVO_STATUSES = {2, 4, 5}
+
 
 def palm_center(hand):
     xs = [hand.landmark[i].x for i in PALM_LANDMARKS]
@@ -92,6 +94,10 @@ class TeleopNode(Node):
         self.declare_parameter("operator_acquire_radius", 0.45)
         self.declare_parameter("operator_max_jump", 0.30)
         self.declare_parameter("operator_lock_log_period", 2.0)
+        self.declare_parameter("safety_latch_enabled", True)
+        self.declare_parameter("split_control_window", True)
+        self.declare_parameter("invert_lateral_axis", True)
+        self.declare_parameter("swap_control_panes", True)
 
         requested_arm = self.get_parameter("arm").value
         if requested_arm not in ("left", "right", "both"):
@@ -150,6 +156,7 @@ class TeleopNode(Node):
         self.last_status_log_time = {"left": {}, "right": {}}
         self.last_operator_palm = {"left": None, "right": None}
         self.last_operator_lock_log_time = {"left": 0.0, "right": 0.0}
+        self.safety_latches = {"left": None, "right": None}
 
         self.tracker = HandTracker(max_num_hands=2)
 
@@ -181,6 +188,10 @@ class TeleopNode(Node):
         self.operator_acquire_radius = float(self.get_parameter("operator_acquire_radius").value)
         self.operator_max_jump = float(self.get_parameter("operator_max_jump").value)
         self.operator_lock_log_period = float(self.get_parameter("operator_lock_log_period").value)
+        self.safety_latch_enabled = bool(self.get_parameter("safety_latch_enabled").value)
+        self.split_control_window = bool(self.get_parameter("split_control_window").value)
+        self.invert_lateral_axis = bool(self.get_parameter("invert_lateral_axis").value)
+        self.swap_control_panes = bool(self.get_parameter("swap_control_panes").value)
         self.last_log_time = 0.0
 
         camera_index = int(self.get_parameter("camera_index").value)
@@ -196,7 +207,10 @@ class TeleopNode(Node):
             f"max_linear={self.max_linear_speed} m/s, "
             f"max_angular={self.max_angular_speed} rad/s, "
             f"full_scale={self.motion_full_scale}, "
-            f"ramp_rate={self.ramp_rate}"
+            f"ramp_rate={self.ramp_rate}, "
+            f"split_control_window={self.split_control_window}, "
+            f"invert_lateral_axis={self.invert_lateral_axis}, "
+            f"swap_control_panes={self.swap_control_panes}"
         )
 
     # ------------------------------------------------------------------ #
@@ -204,12 +218,46 @@ class TeleopNode(Node):
     # ------------------------------------------------------------------ #
 
     def left_status_cb(self, msg):
-        self.servo_status["left"] = msg.data
-        self.log_servo_status("left", msg.data)
+        self.handle_servo_status("left", msg.data)
 
     def right_status_cb(self, msg):
-        self.servo_status["right"] = msg.data
-        self.log_servo_status("right", msg.data)
+        self.handle_servo_status("right", msg.data)
+
+    def handle_servo_status(self, arm, status):
+        self.servo_status[arm] = status
+        if self.safety_latch_enabled and status in HARD_STOP_SERVO_STATUSES:
+            self.engage_safety_latch(arm, status)
+        self.log_servo_status(arm, status)
+
+    def engage_safety_latch(self, arm, status):
+        if self.safety_latches[arm] is not None:
+            return
+        reason = SERVO_STATUS_MESSAGES.get(status, f"Servo status {status}")
+        self.safety_latches[arm] = reason
+        self.publish_twist(arm, 0.0, 0.0, 0.0)
+        self.request_servo_service(arm, "pause")
+        self.get_logger().error(
+            f"{arm.capitalize()} safety latch engaged: {reason}. "
+            "Hand commands are disabled for this arm. Remove your hand from view "
+            "to clear the latch, then reacquire control from the centre."
+        )
+
+    def release_safety_latch_if_idle(self, arm, now):
+        if self.safety_latches[arm] is None:
+            return
+        last_seen = self.last_hand_seen_time[arm]
+        if last_seen is not None and now - last_seen <= self.no_hand_pause_timeout:
+            return
+        self.safety_latches[arm] = None
+        self.last_operator_palm[arm] = None
+        self.reset_arm_filters(arm)
+        self.get_logger().info(
+            f"{arm.capitalize()} safety latch cleared. Move hand near centre to resume."
+        )
+
+    def reset_arm_filters(self, arm):
+        for filt in self.filters[arm].values():
+            filt.previous_val = None
 
     def joint_state_cb(self, msg):
         for name, position in zip(msg.name, msg.position):
@@ -340,6 +388,9 @@ class TeleopNode(Node):
             for arm, hand in assignments.items():
                 if arm not in self.active_arms:
                     continue
+                if self.safety_latches[arm] is not None:
+                    self.last_hand_seen_time[arm] = now
+                    continue
                 if not self.accept_operator_hand(arm, hand, now):
                     continue
                 commands[arm] = self.hand_to_command(arm, hand)
@@ -349,6 +400,13 @@ class TeleopNode(Node):
                 self.ensure_servo_active(arm)
 
         for arm in self.active_arms:
+            if self.safety_latches[arm] is not None:
+                ramped = self.ramp_velocities(arm, 0.0, 0.0, 0.0)
+                self.publish_twist(arm, **ramped)
+                self.release_safety_latch_if_idle(arm, now)
+                self.pause_servo_if_idle(arm, now)
+                continue
+
             command = commands[arm]
             if not command["seen"]:
                 # Ramp velocity to zero smoothly when hand disappears
@@ -412,11 +470,12 @@ class TeleopNode(Node):
         last_palm = self.last_operator_palm[arm]
 
         if last_seen is None or last_palm is None or now - last_seen > self.no_hand_pause_timeout:
-            distance_from_center = math.hypot(px - 0.5, py - 0.5)
+            local_x, local_y = self.control_coordinates(arm, px, py)
+            distance_from_center = math.hypot(local_x - 0.5, local_y - 0.5)
             if distance_from_center > self.operator_acquire_radius:
                 self.log_operator_lock(
                     arm,
-                    "ignoring hand outside acquisition zone; move the operator hand near centre to take control",
+                    "ignoring hand outside acquisition zone; move the operator hand near its pane centre to take control",
                 )
                 return False
             return True
@@ -441,6 +500,22 @@ class TeleopNode(Node):
     # Gesture → velocity mapping
     # ------------------------------------------------------------------ #
 
+    def control_coordinates(self, arm, raw_x, raw_y):
+        if not self.split_control_window:
+            return raw_x, raw_y
+
+        pane = self.control_pane_for_arm(arm)
+        if pane == "left":
+            local_x = raw_x * 2.0
+        else:
+            local_x = (raw_x - 0.5) * 2.0
+        return self.clamp(local_x, 0.0, 1.0), raw_y
+
+    def control_pane_for_arm(self, arm):
+        if not self.swap_control_panes:
+            return arm
+        return "right" if arm == "left" else "left"
+
     def hand_to_command(self, arm, hand):
         # Use palm centre (average of wrist + 4 MCP knuckles) — far more stable
         # than the index fingertip which jitters several pixels per frame.
@@ -448,10 +523,13 @@ class TeleopNode(Node):
 
         smooth_x = self.filters[arm]["x"].update(raw_x)
         smooth_y = self.filters[arm]["y"].update(raw_y)
+        control_x, control_y = self.control_coordinates(arm, smooth_x, smooth_y)
 
-        # Displacement from image centre → servo axis
-        y_axis = self.normalized_axis(0.5 - smooth_x, full_scale=self.motion_full_scale)
-        z_axis = self.normalized_axis(0.5 - smooth_y, full_scale=self.motion_full_scale)
+        # Displacement from the arm's control-pane centre → servo axis.
+        # Default lateral mapping is front-view intuitive: hand right -> robot right.
+        lateral_error = control_x - 0.5 if self.invert_lateral_axis else 0.5 - control_x
+        y_axis = self.normalized_axis(lateral_error, full_scale=self.motion_full_scale)
+        z_axis = self.normalized_axis(0.5 - control_y, full_scale=self.motion_full_scale)
         vel_y = y_axis * self.max_linear_speed
         vel_z = z_axis * self.max_linear_speed
 
@@ -579,15 +657,29 @@ class TeleopNode(Node):
 
     def draw_debug_overlay(self, frame, commands):
         height, width = frame.shape[:2]
-        # Centre crosshair
-        cx, cy = width // 2, height // 2
-        dz_px = int(self.deadzone * width)
-        cv2.line(frame, (cx, 0), (cx, height), (80, 80, 80), 1)
-        cv2.line(frame, (0, cy), (width, cy), (80, 80, 80), 1)
-        cv2.circle(frame, (cx, cy), dz_px, (0, 255, 255), 1)  # deadzone ring
-        # Full-scale ring
-        fs_px = int(self.motion_full_scale * width)
-        cv2.circle(frame, (cx, cy), fs_px, (0, 180, 255), 1)
+        # Per-arm control panes. Each pane has its own centre/deadzone.
+        panes = self.control_panes(width, height)
+        for arm, (x0, x1, cy) in panes.items():
+            if arm not in self.active_arms:
+                continue
+            cx = (x0 + x1) // 2
+            pane_w = x1 - x0
+            cv2.rectangle(frame, (x0, 0), (x1 - 1, height - 1), (45, 45, 45), 1)
+            cv2.line(frame, (cx, 0), (cx, height), (80, 80, 80), 1)
+            cv2.line(frame, (x0, cy), (x1, cy), (80, 80, 80), 1)
+            dz_px = int(self.deadzone * pane_w)
+            fs_px = int(self.motion_full_scale * pane_w)
+            cv2.circle(frame, (cx, cy), dz_px, (0, 255, 255), 1)
+            cv2.circle(frame, (cx, cy), fs_px, (0, 180, 255), 1)
+            cv2.putText(
+                frame,
+                arm.upper(),
+                (x0 + 12, 22),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (200, 200, 200),
+                2,
+            )
 
         y_text = 28
         for arm in self.active_arms:
@@ -614,6 +706,23 @@ class TeleopNode(Node):
                           (0, 220, 0) if cmd["seen"] else (80, 80, 80), -1)
             cv2.putText(frame, arm[0].upper(), (bar_x - 14, bar_y + 9),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1)
+
+    def control_panes(self, width, height):
+        cy = height // 2
+        if not self.split_control_window:
+            return {
+                "left": (0, width, cy),
+                "right": (0, width, cy),
+            }
+        mid = width // 2
+        physical_panes = {
+            "left": (0, mid, cy),
+            "right": (mid, width, cy),
+        }
+        return {
+            arm: physical_panes[self.control_pane_for_arm(arm)]
+            for arm in ("left", "right")
+        }
 
 
 def main(args=None):

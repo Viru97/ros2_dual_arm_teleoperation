@@ -29,6 +29,7 @@ setup(
             'controller_joint_test  = dual_arm_teleop.controller_joint_test:main',
             'ready_pose_node      = dual_arm_teleop.ready_pose_node:main',
             'gripper_bridge_node  = dual_arm_teleop.gripper_bridge_node:main',
+            'handover_baton_node = dual_arm_teleop.handover_baton_node:main',
         ],
     },
 )
