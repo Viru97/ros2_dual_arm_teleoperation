@@ -4,6 +4,10 @@ ROS 2 Humble workspace for visualizing and teleoperating a dual-arm UR5e setup w
 
 This is an RViz visualization/control stack, not a physics simulator.
 
+## Demo
+
+![Dual-arm hand teleoperation demo](Demo/output.gif)
+
 This repository is intended to live as the `src` folder of a colcon workspace:
 
 ```text
