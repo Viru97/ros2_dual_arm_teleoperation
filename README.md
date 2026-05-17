@@ -65,18 +65,53 @@ ros2 launch dual_arm_teleop hand_teleop.launch.py \
   operator_max_jump:=0.30
 ```
 
-## Dependencies
+## Setup On A New Machine
 
-Install ROS 2 Humble, MoveIt 2, and ros2_control:
+Use Ubuntu 22.04 with ROS 2 Humble and a working webcam.
+
+Create the colcon workspace and place this repository as `src`:
 
 ```bash
-sudo apt install ros-humble-moveit ros-humble-ros2-control ros-humble-ros2-controllers
+mkdir -p ~/teleop_challenge_ws
+cd ~/teleop_challenge_ws
+git clone <private-repository-url> src
 ```
 
-Install Python packages:
+For a zip submission, extract or rename the repository folder so the layout is:
+
+```text
+~/teleop_challenge_ws/
+  src/
+    README.md
+    dual_arm_description/
+    dual_arm_moveit_config/
+    dual_arm_teleop/
+    Universal_Robots_ROS2_Description/
+    ros2_robotiq_gripper/
+```
+
+Install ROS packages and build tools:
 
 ```bash
-python3 -m pip install opencv-python mediapipe numpy
+sudo apt update
+sudo apt install -y \
+  python3-colcon-common-extensions \
+  python3-pip \
+  python3-rosdep \
+  python3-venv \
+  ros-humble-joint-state-publisher-gui \
+  ros-humble-moveit \
+  ros-humble-moveit-servo \
+  ros-humble-ros2-control \
+  ros-humble-ros2-controllers \
+  ros-humble-xacro
+```
+
+Initialize `rosdep` if it has not already been initialized on the machine:
+
+```bash
+sudo rosdep init 2>/dev/null || true
+rosdep update
 ```
 
 This repository includes source copies of the external robot description and
@@ -85,20 +120,34 @@ gripper packages used by the workspace:
 - `Universal_Robots_ROS2_Description`
 - `ros2_robotiq_gripper`
 
-## Build
+Install any remaining ROS dependencies, then install the Python camera stack:
 
 ```bash
 cd ~/teleop_challenge_ws
-colcon build
+source /opt/ros/humble/setup.bash
+rosdep install --from-paths src --ignore-src -r -y
+
+python3 -m venv venv --system-site-packages
+source venv/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install opencv-python mediapipe numpy
+```
+
+Build and source the workspace:
+
+```bash
+cd ~/teleop_challenge_ws
+source /opt/ros/humble/setup.bash
+source venv/bin/activate
+colcon build --symlink-install
 source install/setup.bash
+chmod +x src/run_full_teleop.sh
 ```
 
 ## Run Everything
 
 ```bash
 cd ~/teleop_challenge_ws
-source /opt/ros/humble/setup.bash
-source install/setup.bash
 ./src/run_full_teleop.sh
 ```
 
