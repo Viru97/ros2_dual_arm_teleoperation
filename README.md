@@ -4,6 +4,13 @@ ROS 2 Humble workspace for visualizing and teleoperating a dual-arm UR5e setup w
 
 This is an RViz visualization/control stack, not a physics simulator.
 
+This repository is intended to live as the `src` folder of a colcon workspace:
+
+```text
+teleop_challenge_ws/
+  src/   # git repository root
+```
+
 ## Implemented
 
 - Dual UR5e robot model with two-finger Robotiq grippers.
@@ -22,11 +29,11 @@ This is an RViz visualization/control stack, not a physics simulator.
 - Gripper bridge:
   - `/teleop/left_gripper_target` -> `/left_gripper_controller/joint_trajectory`
   - `/teleop/right_gripper_target` -> `/right_gripper_controller/joint_trajectory`
-- One-command full launch through `run_full_teleop.sh`.
+- One-command full launch through the versioned helper script `run_full_teleop.sh`.
 
 ## Safety And Noise Handling
 
-The assignment does not require perfect hand tracking, so the control path includes several stability measures:
+The control path includes stability and safety measures for noisy camera input and one-operator use:
 
 - Palm-center tracking uses wrist and MCP landmarks instead of a fingertip, reducing jitter.
 - EMA filtering smooths palm position and hand roll.
@@ -35,6 +42,8 @@ The assignment does not require perfect hand tracking, so the control path inclu
 - MoveIt Servo checks singularities, self-collision, scene collision, and joint limits.
 - Removing the hand pauses Servo after a short timeout.
 - Startup ready pose keeps both arms bent and away from common UR5e singularities.
+- Hard Servo stops latch the affected arm off until the operator removes their hand.
+  This covers collision emergency stop, singularity emergency stop, and joint-bound halt.
 - Operator lock rejects likely second-person hands or MediaPipe identity swaps:
   - a new hand must first acquire control near the image center;
   - sudden palm jumps are ignored and the arm ramps toward stop.
@@ -66,7 +75,8 @@ Install Python packages:
 python3 -m pip install opencv-python mediapipe numpy
 ```
 
-This workspace includes source copies of:
+This repository includes source copies of the external robot description and
+gripper packages used by the workspace:
 
 - `Universal_Robots_ROS2_Description`
 - `ros2_robotiq_gripper`
@@ -85,15 +95,17 @@ source install/setup.bash
 cd ~/teleop_challenge_ws
 source /opt/ros/humble/setup.bash
 source install/setup.bash
-./run_full_teleop.sh
+./src/run_full_teleop.sh
 ```
 
 Useful launch options:
 
 ```bash
-./run_full_teleop.sh arm:=left
-./run_full_teleop.sh arm:=both show_debug_image:=true
-./run_full_teleop.sh max_linear_speed:=0.30 max_angular_speed:=0.8 motion_full_scale:=0.32
+./src/run_full_teleop.sh arm:=left
+./src/run_full_teleop.sh arm:=both show_debug_image:=true
+./src/run_full_teleop.sh max_linear_speed:=0.30 max_angular_speed:=0.8 motion_full_scale:=0.32
+./src/run_full_teleop.sh split_control_window:=true invert_lateral_axis:=true swap_control_panes:=true
+./src/run_full_teleop.sh start_handover_baton:=true
 ```
 
 The full launch starts:
@@ -132,12 +144,23 @@ Servo starts paused so it does not fight MoveIt plan-and-execute. The hand teleo
 
 ## Controls
 
+- The debug camera window is split into two control panes by default.
+- Pane ownership is swapped by default for the front-camera demo:
+  right pane controls the left arm, left pane controls the right arm.
 - Move palm to image center: stop.
 - Move palm left/right/up/down: planar end-effector motion.
+- Default lateral mapping is front-view intuitive: hand right makes the robot
+  move right from the operator's/front camera viewpoint.
 - Roll hand: yaw rotation.
 - Pinch thumb and index finger: close gripper.
 - Spread thumb and index finger: open gripper.
 - Remove hand: halt command and pause Servo.
+
+If Servo reports a hard stop, hand control is disabled for that arm. Remove the
+hand from the camera view to clear the safety latch, then reacquire control from
+the image center. If the robot is still near the obstacle or singularity, use
+MoveIt or the ready pose to move back to a safe bent configuration before
+continuing teleoperation.
 
 Start with `arm:=left` while tuning, then use `arm:=both` once both arms are behaving safely.
 
@@ -200,10 +223,14 @@ ros2 topic hz /joint_states
 
 ## Version Control
 
-The submission should be under version control. If this workspace is not already a Git repository:
+The git repository root is `teleop_challenge_ws/src`. This keeps generated
+workspace folders such as `build/`, `install/`, `log/`, and the Python virtual
+environment outside the project history.
+
+From the repository root:
 
 ```bash
-git init
+cd ~/teleop_challenge_ws/src
 git add .
 git commit -m "Initial dual-arm teleoperation challenge solution"
 ```
