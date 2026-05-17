@@ -72,6 +72,21 @@ def generate_launch_description():
         default_value="2.0",
         description="Seconds between repeated Servo warning logs.",
     )
+    operator_lock_enabled_arg = DeclareLaunchArgument(
+        "operator_lock_enabled",
+        default_value="true",
+        description="Reject likely second-person hands or sudden tracking identity swaps.",
+    )
+    operator_acquire_radius_arg = DeclareLaunchArgument(
+        "operator_acquire_radius",
+        default_value="0.45",
+        description="Normalized radius around image center where a new operator hand may acquire control.",
+    )
+    operator_max_jump_arg = DeclareLaunchArgument(
+        "operator_max_jump",
+        default_value="0.30",
+        description="Maximum normalized palm jump between frames before a hand is rejected.",
+    )
     visualization_publish_frequency_arg = DeclareLaunchArgument(
         "visualization_publish_frequency",
         default_value="100.0",
@@ -118,6 +133,9 @@ def generate_launch_description():
             "no_hand_pause_timeout": LaunchConfiguration("no_hand_pause_timeout"),
             "ramp_rate": LaunchConfiguration("ramp_rate"),
             "servo_status_log_period": LaunchConfiguration("servo_status_log_period"),
+            "operator_lock_enabled": LaunchConfiguration("operator_lock_enabled"),
+            "operator_acquire_radius": LaunchConfiguration("operator_acquire_radius"),
+            "operator_max_jump": LaunchConfiguration("operator_max_jump"),
             "start_gripper_bridge": LaunchConfiguration("start_gripper_bridge"),
         },
     )
@@ -134,6 +152,9 @@ def generate_launch_description():
         no_hand_pause_timeout_arg,
         ramp_rate_arg,
         servo_status_log_period_arg,
+        operator_lock_enabled_arg,
+        operator_acquire_radius_arg,
+        operator_max_jump_arg,
         visualization_publish_frequency_arg,
         start_gripper_bridge_arg,
         servo_auto_start_arg,

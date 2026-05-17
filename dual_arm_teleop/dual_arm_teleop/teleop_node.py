@@ -83,11 +83,15 @@ class TeleopNode(Node):
         # 0.30 means moving hand 30% of frame width from centre = max speed.
         self.declare_parameter("motion_full_scale", 0.30)
         # Velocity ramp: max fractional change per control tick (avoids jerk).
-        # 0.12 lets speed ramp from 0→100% in ~8 ticks (~270 ms at 30 Hz).
+        # 0.12 lets speed ramp from 0→100% in ~8 ticks (~80 ms at 100 Hz).
         self.declare_parameter("ramp_rate", 0.12)
         # Throttle repeated Servo warning logs while still printing the current
         # joint pose often enough to diagnose collision/singularity bottlenecks.
         self.declare_parameter("servo_status_log_period", 2.0)
+        self.declare_parameter("operator_lock_enabled", True)
+        self.declare_parameter("operator_acquire_radius", 0.45)
+        self.declare_parameter("operator_max_jump", 0.30)
+        self.declare_parameter("operator_lock_log_period", 2.0)
 
         requested_arm = self.get_parameter("arm").value
         if requested_arm not in ("left", "right", "both"):
@@ -144,6 +148,8 @@ class TeleopNode(Node):
         self.requested_servo_services = set()
         self.last_hand_seen_time = {"left": None, "right": None}
         self.last_status_log_time = {"left": {}, "right": {}}
+        self.last_operator_palm = {"left": None, "right": None}
+        self.last_operator_lock_log_time = {"left": 0.0, "right": 0.0}
 
         self.tracker = HandTracker(max_num_hands=2)
 
@@ -171,6 +177,10 @@ class TeleopNode(Node):
         self.ramp_rate = float(self.get_parameter("ramp_rate").value)
         self.no_hand_pause_timeout = float(self.get_parameter("no_hand_pause_timeout").value)
         self.servo_status_log_period = float(self.get_parameter("servo_status_log_period").value)
+        self.operator_lock_enabled = bool(self.get_parameter("operator_lock_enabled").value)
+        self.operator_acquire_radius = float(self.get_parameter("operator_acquire_radius").value)
+        self.operator_max_jump = float(self.get_parameter("operator_max_jump").value)
+        self.operator_lock_log_period = float(self.get_parameter("operator_lock_log_period").value)
         self.last_log_time = 0.0
 
         camera_index = int(self.get_parameter("camera_index").value)
@@ -301,6 +311,7 @@ class TeleopNode(Node):
         if last_seen is None or now - last_seen > self.no_hand_pause_timeout:
             self.publish_twist(arm, 0.0, 0.0, 0.0)
             self.request_servo_service(arm, "pause")
+            self.last_operator_palm[arm] = None
 
     # ------------------------------------------------------------------ #
     # Main control loop
@@ -329,9 +340,12 @@ class TeleopNode(Node):
             for arm, hand in assignments.items():
                 if arm not in self.active_arms:
                     continue
+                if not self.accept_operator_hand(arm, hand, now):
+                    continue
                 commands[arm] = self.hand_to_command(arm, hand)
                 commands[arm]["seen"] = True
                 self.last_hand_seen_time[arm] = now
+                self.last_operator_palm[arm] = palm_center(hand)
                 self.ensure_servo_active(arm)
 
         for arm in self.active_arms:
@@ -340,6 +354,9 @@ class TeleopNode(Node):
                 # Ramp velocity to zero smoothly when hand disappears
                 ramped = self.ramp_velocities(arm, 0.0, 0.0, 0.0)
                 self.publish_twist(arm, **ramped)
+                last_seen = self.last_hand_seen_time[arm]
+                if last_seen is None or now - last_seen > self.no_hand_pause_timeout:
+                    self.last_operator_palm[arm] = None
                 self.pause_servo_if_idle(arm, now)
                 continue
 
@@ -385,6 +402,40 @@ class TeleopNode(Node):
             assignments[arm] = hand_landmarks
 
         return assignments
+
+    def accept_operator_hand(self, arm, hand, now):
+        if not self.operator_lock_enabled:
+            return True
+
+        px, py = palm_center(hand)
+        last_seen = self.last_hand_seen_time[arm]
+        last_palm = self.last_operator_palm[arm]
+
+        if last_seen is None or last_palm is None or now - last_seen > self.no_hand_pause_timeout:
+            distance_from_center = math.hypot(px - 0.5, py - 0.5)
+            if distance_from_center > self.operator_acquire_radius:
+                self.log_operator_lock(
+                    arm,
+                    "ignoring hand outside acquisition zone; move the operator hand near centre to take control",
+                )
+                return False
+            return True
+
+        jump = math.hypot(px - last_palm[0], py - last_palm[1])
+        if jump > self.operator_max_jump:
+            self.log_operator_lock(
+                arm,
+                f"ignoring sudden hand jump ({jump:.2f}); possible second operator or tracking swap",
+            )
+            return False
+        return True
+
+    def log_operator_lock(self, arm, message):
+        now = time.monotonic()
+        if now - self.last_operator_lock_log_time[arm] < self.operator_lock_log_period:
+            return
+        self.last_operator_lock_log_time[arm] = now
+        self.get_logger().warn(f"{arm.capitalize()} operator lock: {message}.")
 
     # ------------------------------------------------------------------ #
     # Gesture → velocity mapping

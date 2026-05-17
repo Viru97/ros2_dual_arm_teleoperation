@@ -78,6 +78,24 @@ def generate_launch_description():
         default_value="2.0",
         description="Seconds between repeated Servo warning logs with joint angles.",
     )
+    operator_lock_enabled_arg = DeclareLaunchArgument(
+        "operator_lock_enabled",
+        default_value="true",
+        description=(
+            "Reject likely second-person hands/tracking swaps. A hand must acquire "
+            "control near the center and then move continuously."
+        ),
+    )
+    operator_acquire_radius_arg = DeclareLaunchArgument(
+        "operator_acquire_radius",
+        default_value="0.45",
+        description="Normalized radius around image center where a new operator hand may acquire control.",
+    )
+    operator_max_jump_arg = DeclareLaunchArgument(
+        "operator_max_jump",
+        default_value="0.30",
+        description="Maximum normalized palm jump between frames before a hand is rejected.",
+    )
     start_gripper_bridge_arg = DeclareLaunchArgument(
         "start_gripper_bridge",
         default_value="true",
@@ -106,6 +124,15 @@ def generate_launch_description():
                 "servo_status_log_period": ParameterValue(
                     LaunchConfiguration("servo_status_log_period"), value_type=float
                 ),
+                "operator_lock_enabled": ParameterValue(
+                    LaunchConfiguration("operator_lock_enabled"), value_type=bool
+                ),
+                "operator_acquire_radius": ParameterValue(
+                    LaunchConfiguration("operator_acquire_radius"), value_type=float
+                ),
+                "operator_max_jump": ParameterValue(
+                    LaunchConfiguration("operator_max_jump"), value_type=float
+                ),
             }
         ],
     )
@@ -129,6 +156,9 @@ def generate_launch_description():
         no_hand_pause_timeout_arg,
         ramp_rate_arg,
         servo_status_log_period_arg,
+        operator_lock_enabled_arg,
+        operator_acquire_radius_arg,
+        operator_max_jump_arg,
         start_gripper_bridge_arg,
         teleop_node,
         gripper_bridge_node,
