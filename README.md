@@ -1,4 +1,8 @@
 # Teleoperation Challenge - Dual UR5e Workspace
+![ROS2](https://img.shields.io/badge/ROS2-Humble-blue)
+![MoveIt2](https://img.shields.io/badge/MoveIt2-Servo-green)
+![Python](https://img.shields.io/badge/Python-3.x-blue)
+![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-orange)
 
 ROS 2 Humble workspace for visualizing and teleoperating a dual-arm UR5e setup with Robotiq 2F-85 grippers in RViz. The stack uses MoveIt 2, `ros2_control`, MoveIt Servo, OpenCV, and MediaPipe hand tracking.
 
